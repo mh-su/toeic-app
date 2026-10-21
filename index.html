@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TOEIC RC Practice Test (실전 모의고사)</title>
+  <meta name="description" content="토익 RC 실전 모의고사, 구글 시트 연동 자동 채점 및 Gemini AI 신규 시험지 실시간 출제 시스템" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React 18 & ReactDOM & Babel Standalone CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fadeIn { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 font-sans antialiased selection:bg-indigo-600 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // --- Google Apps Script Web App Endpoint ---
+    const GOOGLE_SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx46rBfi9dMJ16tZGZh67y9VjxzPf9uaAzCbp55FawHxpMdx6V1rrLIaPc8H-S_DlVJ/exec";
+
+    // --- Inline SVG Icons ---
+    const IconCheck = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+    );
+    const IconCheckCircle = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" /></svg>
+    );
+    const IconXCircle = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 9l-6 6m0-6l6 6" /></svg>
+    );
+    const IconAlertCircle = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+    );
+    const IconBookOpen = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+    );
+    const IconSparkles = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" /></svg>
+    );
+    const IconAward = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="6" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" /></svg>
+    );
+    const IconRotateCcw = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a5 5 0 015 5v2a5 5 0 01-5 5H6" /><path strokeLinecap="round" strokeLinejoin="round" d="M7 6L3 10l4 4" /></svg>
+    );
+    const IconChevronDown = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+    );
+    const IconChevronUp = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" /></svg>
+    );
+    const IconFileText = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+    );
+    const IconType = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" /></svg>
+    );
+    const IconSettings = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+    );
+    const IconLoader = ({ className = "w-4 h-4" }) => (
+      <svg className={className + " animate-spin"} fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    );
+    const IconX = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+    );
+    const IconEye = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    );
+    const IconEyeOff = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+    );
+
+    // --- Hardcoded ETS Mock Exam Datasets ---
+    const EXAM_SETS = [
+      {
+        round: 1,
+        title: "제 1회차 실전 모의고사 (클라우드 인벤토리 및 공급망)",
+        part5: [
+          {
+            id: 101, part: "part5", questionNumber: 101,
+            questionText: "The finance director requested that all department managers submit a detailed _______ of their projected quarterly expenditures by Friday afternoon.",
+            options: [{ key: "A", text: "revision" }, { key: "B", text: "estimate" }, { key: "C", text: "permission" }, { key: "D", text: "vacancy" }],
+            correctAnswer: "B",
+            translation: "재무 이사는 모든 부서 관리자들에게 금요일 오후까지 예상 분기 지출액에 대한 상세 견적서(추정치)를 제출할 것을 요청했다.",
+            explanation: {
+              category: "문맥에 맞는 적절한 명사 어휘",
+              summary: "예상 지출액(projected expenditures)과 호응하는 명사 estimate(견적서, 추정치)가 정답입니다.",
+              detail: "a detailed estimate of ~는 토익 파트 5의 대표적 빈출 연어 표현입니다.",
+              distractorAnalysis: "(A) revision은 기존 문서 수정본, (C) permission은 허가, (D) vacancy는 공석입니다."
+            },
+            vocabList: [{ word: "estimate", meaning: "견적(서), 추정치", partOfSpeech: "명사/동사", collocation: "a detailed estimate" }]
+          },
+          {
+            id: 102, part: "part5", questionNumber: 102,
+            questionText: "The technical support team resolved the network malfunction _______, allowing employees to resume their tasks with minimal disruption.",
+            options: [{ key: "A", text: "prompt" }, { key: "B", text: "promptly" }, { key: "C", text: "promptness" }, { key: "D", text: "prompted" }],
+            correctAnswer: "B",
+            translation: "기술 지원팀이 네트워크 오작동을 신속하게 해결하여, 직원들이 업무 중단을 최소화하며 작업을 재개할 수 있도록 했다.",
+            explanation: {
+              category: "품사 자리 (동사 수식 부사)",
+              summary: "동사구 resolved the malfunction을 수식하는 부사 promptly(신속하게)가 정답입니다.",
+              detail: "완전한 절 뒤에서 동사의 양태를 수식하는 자리입니다.",
+              distractorAnalysis: "(A) 형용사/동사, (C) 명사, (D) 과거형 동사입니다."
+            },
+            vocabList: [{ word: "promptly", meaning: "신속하게, 즉시", partOfSpeech: "부사", collocation: "resolve promptly" }]
+          },
+          {
+            id: 103, part: "part5", questionNumber: 103,
+            questionText: "_______ the adverse weather conditions, the cargo vessel arrived at the port of Incheon strictly according to schedule.",
+            options: [{ key: "A", text: "Although" }, { key: "B", text: "Because" }, { key: "C", text: "Despite" }, { key: "D", text: "Even if" }],
+            correctAnswer: "C",
+            translation: "악천후에도 불구하고, 화물선은 일정에 정확히 맞춰 인천항에 도착했다.",
+            explanation: {
+              category: "전치사 vs 접속사 구별",
+              summary: "뒤에 명사구(the adverse weather conditions)가 이어지므로 양보 전치사 Despite가 정답입니다.",
+              detail: "Although/Because/Even if는 접속사로 뒤에 주어+동사가 와야 합니다.",
+              distractorAnalysis: "명사구를 이끌 수 있는 전치사는 Despite뿐입니다."
+            },
+            vocabList: [{ word: "despite", meaning: "~에도 불구하고", partOfSpeech: "전치사", collocation: "despite the adverse conditions" }]
+          },
+          {
+            id: 104, part: "part5", questionNumber: 104,
+            questionText: "Over the past three years, Vertex BioTech _______ its research facilities to accommodate the growing number of clinical trials.",
+            options: [{ key: "A", text: "expands" }, { key: "B", text: "will expand" }, { key: "C", text: "has expanded" }, { key: "D", text: "was expanding" }],
+            correctAnswer: "C",
+            translation: "지난 3년 동안, 버텍스 바이오텍은 증가하는 임상시험 건수를 수용하기 위해 연구 시설을 확장해 왔다.",
+            explanation: {
+              category: "동사의 시제와 수일치",
+              summary: "'Over the past + 기간'과 결합하는 시제는 현재완료(has/have + p.p.)입니다.",
+              detail: "단수 주어 Vertex BioTech와 결합하는 has expanded가 정답입니다.",
+              distractorAnalysis: "(A) 단순현재, (B) 미래, (D) 과거진행은 기간 부사구와 맞지 않습니다."
+            },
+            vocabList: [{ word: "accommodate", meaning: "수용하다, 부응하다", partOfSpeech: "동사" }]
+          },
+          {
+            id: 105, part: "part5", questionNumber: 105,
+            questionText: "All factory personnel must wear protective headgear in the assembly plant to remain _______ with occupational safety regulations.",
+            options: [{ key: "A", text: "compliant" }, { key: "B", text: "capable" }, { key: "C", text: "eligible" }, { key: "D", text: "dependable" }],
+            correctAnswer: "A",
+            translation: "모든 공장 인력은 산업안전 규정을 준수하기 위해 조립 공장 내에서 보호 안전모를 착용해야 한다.",
+            explanation: {
+              category: "어휘 및 연어(Collocation) 표현",
+              summary: "'remain compliant with(~을 준수하다)' 관용 연어 표현 문제입니다.",
+              detail: "규정/규칙과 호응하여 준수 상태를 나타내는 형용사는 compliant입니다.",
+              distractorAnalysis: "capable of, eligible for, dependable(신뢰할 만한)은 규정과 결합하지 않습니다."
+            },
+            vocabList: [{ word: "compliant", meaning: "준수하는, 따르는", partOfSpeech: "형용사", collocation: "remain compliant with" }]
+          }
+        ],
+        part6Passage: {
+          part: "part6",
+          title: "Questions 106-109 refer to the following memorandum.",
+          documentType: "MEMORANDUM",
+          headerFields: [
+            { label: "TO", value: "All Regional Warehouse Supervisors and Logistics Personnel" },
+            { label: "FROM", value: "Clara Morales, Vice President of Global Supply Operations" },
+            { label: "DATE", value: "October 24" },
+            { label: "SUBJECT", value: "Upcoming Migration to Nexus Inventory Cloud Platform" }
+          ],
+          paragraphs: [
+            "We are pleased to announce that on November 15, our entire logistics network will begin [ 106 ] to the new Nexus Inventory Cloud platform. This state-of-the-art enterprise solution has been custom engineered to deliver real-time inventory tracking, automate restock orders, and streamline communication across our five domestic fulfillment hubs.",
+            "During the scheduled upgrade window from November 12 through November 14, standard database servers [ 107 ] temporarily unavailable. Please rest assured that our IT infrastructure crew will conduct data transfers during off-peak overnight hours to prevent operational bottlenecks. [ 108 ]. You are strongly encouraged to verify your preliminary login credentials before Friday, November 7.",
+            "Should you encounter unexpected discrepancies or require hands-on troubleshooting during this migration phase, please reach out to the dedicated IT transition taskforce [ 109 ] extension 4402. Thank you for your continued dedication to modernizing our operational workflow."
+          ],
+          questionIds: [106, 107, 108, 109]
+        },
+        part6Questions: [
+          {
+            id: 106, part: "part6", questionNumber: 106,
+            questionText: "We are pleased to announce that on November 15, our entire logistics network will begin [ 106 ] to the new Nexus Inventory Cloud platform.",
+            options: [{ key: "A", text: "transitioning" }, { key: "B", text: "transitions" }, { key: "C", text: "transition" }, { key: "D", text: "transitioned" }],
+            correctAnswer: "A",
+            translation: "당사의 전체 물류 네트워크가 11월 15일에 새로운 넥서스 인벤토리 클라우드 플랫폼으로의 전환을 시작할 예정임을 알려드립니다.",
+            explanation: { category: "준동사 (동명사)", summary: "동사 begin의 목적어 역할을 하는 동명사 transitioning이 정답입니다.", detail: "begin + 동명사/to부정사 구문입니다." },
+            vocabList: [{ word: "transition", meaning: "전환하다; 이행", partOfSpeech: "동사/명사" }]
+          },
+          {
+            id: 107, part: "part6", questionNumber: 107,
+            questionText: "During the scheduled upgrade window from November 12 through November 14, standard database servers [ 107 ] temporarily unavailable.",
+            options: [{ key: "A", text: "will be" }, { key: "B", text: "was" }, { key: "C", text: "were" }, { key: "D", text: "have been" }],
+            correctAnswer: "A",
+            translation: "11월 12일부터 11월 14일까지 예정된 업그레이드 기간 동안, 표준 데이터베이스 서버의 이용이 일시적으로 중단될 것입니다.",
+            explanation: { category: "동사 시제", summary: "명확한 미래 일정에 대한 서술이므로 will be가 정답입니다.", detail: "공지일(10월 24일) 이후의 미래 시점을 서술합니다." },
+            vocabList: [{ word: "unavailable", meaning: "이용할 수 없는", partOfSpeech: "형용사" }]
+          },
+          {
+            id: 108, part: "part6", questionNumber: 108,
+            questionText: "[ 108 ] You are strongly encouraged to verify your preliminary login credentials before Friday, November 7.",
+            options: [
+              { key: "A", text: "We regret to inform you that the annual corporate gala has been indefinitely postponed." },
+              { key: "B", text: "All warehouse supervisors must complete the mandatory 20-minute online tutorial before deployment." },
+              { key: "C", text: "Major commercial competitors have begun leasing additional warehouse space in Europe." },
+              { key: "D", text: "The customer service division will recruit twenty seasonal representatives next month." }
+            ],
+            correctAnswer: "B",
+            translation: "[ 108 ] 모든 물류창고 관리자는 시스템 배포 전에 의무 20분 온라인 튜토리얼을 완료해야 합니다.",
+            explanation: { category: "문장 삽입", summary: "시스템 배포 전 로그인 확인 안내와 이어지는 사전 필수 교육 안내 (B)가 자연스럽습니다.", detail: "업무 소프트웨어 이전 문맥과 직결됩니다." },
+            vocabList: [{ word: "mandatory", meaning: "의무적인, 필수의", partOfSpeech: "형용사" }]
+          },
+          {
+            id: 109, part: "part6", questionNumber: 109,
+            questionText: "Should you encounter unexpected discrepancies... please reach out to the dedicated IT transition taskforce [ 109 ] extension 4402.",
+            options: [{ key: "A", text: "against" }, { key: "B", text: "along" }, { key: "C", text: "at" }, { key: "D", text: "between" }],
+            correctAnswer: "C",
+            translation: "구내번호 4402번의 전담 IT 전환 태스크포스팀에 문의해 주시기 바랍니다.",
+            explanation: { category: "전치사", summary: "전화 구내번호 앞에는 전치사 at이 옵니다.", detail: "at extension 4402 형태로 쓰입니다." },
+            vocabList: [{ word: "extension", meaning: "구내번호", partOfSpeech: "명사" }]
+          }
+        ],
+        part7Passage: {
+          part: "part7",
+          title: "Questions 110-112 refer to the following e-mail.",
+          documentType: "EMAIL",
+          headerFields: [
+            { label: "TO", value: "Jonathan Reynolds <jreynolds@kensingtonarch.com>" },
+            { label: "FROM", value: "Sandra Castillo <scastillo@premierofficesupply.com>" },
+            { label: "DATE", value: "October 18" },
+            { label: "SUBJECT", value: "Order Status & Delivery Schedule Update (PO #84920)" }
+          ],
+          paragraphs: [
+            "Dear Mr. Reynolds,\n\nThank you for choosing Premier Office Supply for your firm's commercial furnishing needs. We are writing to provide a formal update concerning Purchase Order #84920, placed on October 14, which includes twelve ergonomic workstations and twenty-four executive mesh chairs destined for your newly expanded architectural studio in Portland.",
+            "Because your order specifies customized natural white-oak veneer finishes, our manufacturing workshop in Seattle requires an additional four business days for high-grade surface sealing and rigorous stress testing. Consequently, the estimated delivery arrival date has been revised from October 27 to Thursday, November 2.",
+            "To offset any inconvenience this schedule adjustment might cause your project timeline, Premier Office Supply has automatically upgraded your shipping tier to our premium White Glove Delivery Service at no additional charge. Under this arrangement, our certified logistics team will unload the crates directly into your 4th-floor office suite, assemble every desk and chair according to your floor plan, and remove all discarded packaging materials from your premises before departure.",
+            "We kindly request that you ensure the building's dedicated freight elevator is reserved for our transport crew between 9:00 A.M. and 1:00 P.M. on the delivery date. A logistics dispatcher will call you 24 hours prior to dispatch to reconfirm access details.\n\nSincerely,\nSandra Castillo\nCustomer Accounts Specialist\nPremier Office Supply"
+          ],
+          questionIds: [110, 111, 112]
+        },
+        part7Questions: [
+          {
+            id: 110, part: "part7", questionNumber: 110,
+            questionText: "What is the primary purpose of the e-mail?",
+            options: [
+              { key: "A", text: "To issue an invoice for office architectural design services" },
+              { key: "B", text: "To notify a client about a revised shipment date" },
+              { key: "C", text: "To request a refund for defective assembly materials" },
+              { key: "D", text: "To advertise a seasonal discount on ergonomic chairs" }
+            ],
+            correctAnswer: "B",
+            translation: "이 이메일의 주된 목적은 무엇인가?",
+            explanation: { category: "지문의 목적 파악", summary: "고객에게 주문한 가구의 배송 일정이 11월 2일로 변경되었음을 알리는 서신입니다.", detail: "두 번째 단락에서 delivery date has been revised를 명시하고 있습니다." },
+            vocabList: [{ word: "revised", meaning: "수정된, 변경된", partOfSpeech: "형용사" }]
+          },
+          {
+            id: 111, part: "part7", questionNumber: 111,
+            questionText: "What complimentary service will Premier Office Supply provide to Mr. Reynolds?",
+            options: [
+              { key: "A", text: "An extended five-year warranty on all electronic equipment" },
+              { key: "B", text: "Free on-site furniture assembly and disposal of packaging" },
+              { key: "C", text: "A voucher for free interior decoration consultations" },
+              { key: "D", text: "Complimentary shipping on all future supply reorders" }
+            ],
+            correctAnswer: "B",
+            translation: "프리미어 오피스 서플라이가 레이놀즈 씨에게 제공할 무료 혜택은 무엇인가?",
+            explanation: { category: "세부 사실 확인", summary: "무료 화이트글러브 서비스로 현장 가구 조립과 포장재 폐기를 무상 제공합니다.", detail: "assemble every desk and chair... and remove all discarded packaging materials at no additional charge에 명시되어 있습니다." },
+            vocabList: [{ word: "complimentary", meaning: "무료의", partOfSpeech: "형용사" }]
+          },
+          {
+            id: 112, part: "part7", questionNumber: 112,
+            questionText: "What is Mr. Reynolds instructed to do prior to the delivery?",
+            options: [
+              { key: "A", text: "Transfer the remaining balance through bank wire" },
+              { key: "B", text: "Reserve the building's freight elevator for the designated morning" },
+              { key: "C", text: "Send updated blueprint measurements of the studio" },
+              { key: "D", text: "Inspect the goods personally at the Seattle workshop" }
+            ],
+            correctAnswer: "B",
+            translation: "레이놀즈 씨가 배송 전에 해야 할 일로 안내된 것은 무엇인가?",
+            explanation: { category: "요청 사항 확인", summary: "배송 당일 오전 건물 화물 엘리베이터를 예약해 둘 것을 요청받았습니다.", detail: "ensure the building's dedicated freight elevator is reserved라고 명시되어 있습니다." },
+            vocabList: [{ word: "freight elevator", meaning: "화물용 엘리베이터", partOfSpeech: "명사구" }]
+          }
+        ]
+      }
+    ];
+
+    // --- Main App Component ---
+    function App() {
+      const [currentPart, setCurrentPart] = useState('part5');
+      const [userAnswers, setUserAnswers] = useState({});
+      const [isGraded, setIsGraded] = useState(false);
+      const [result, setResult] = useState(null);
+      const [activeExam, setActiveExam] = useState(EXAM_SETS[0]);
+      const [apiKey, setApiKey] = useState('');
+
+      // UI States
+      const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
+      const [isOmrModalOpen, setIsOmrModalOpen] = useState(false);
+      const [isVocabModalOpen, setIsVocabModalOpen] = useState(false);
+      const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+      const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [filterIncorrectOnly, setFilterIncorrectOnly] = useState(false);
+      const [fontSize, setFontSize] = useState('normal');
+      const [toastMessage, setToastMessage] = useState(null);
+
+      const allQuestions = useMemo(() => [
+        ...activeExam.part5,
+        ...activeExam.part6Questions,
+        ...activeExam.part7Questions
+      ], [activeExam]);
+
+      useEffect(() => {
+        try {
+          const storedKey = localStorage.getItem('gemini_api_key');
+          if (storedKey) setApiKey(storedKey);
+        } catch (e) {}
+      }, []);
+
+      useEffect(() => {
+        if (toastMessage && toastMessage.type !== 'info') {
+          const timer = setTimeout(() => setToastMessage(null), 3800);
+          return () => clearTimeout(timer);
+        }
+      }, [toastMessage]);
+
+      const handleSaveApiKey = (key) => {
+        setApiKey(key);
+        try { localStorage.setItem('gemini_api_key', key); } catch (e) {}
+        setToastMessage({ text: 'API 키가 브라우저에 안전하게 저장되었습니다.', type: 'success' });
+      };
+
+      const handleDeleteApiKey = () => {
+        setApiKey('');
+        try { localStorage.removeItem('gemini_api_key'); } catch (e) {}
+        setToastMessage({ text: 'API 키가 삭제되었습니다.', type: 'success' });
+      };
+
+      const handleSelectAnswer = (qId, optionKey) => {
+        if (isGraded) return;
+        setUserAnswers(prev => ({ ...prev, [qId]: optionKey }));
+      };
+
+      const calculateResult = () => {
+        const p5Correct = activeExam.part5.filter(q => userAnswers[q.id] === q.correctAnswer).length;
+        const p6Correct = activeExam.part6Questions.filter(q => userAnswers[q.id] === q.correctAnswer).length;
+        const p7Correct = activeExam.part7Questions.filter(q => userAnswers[q.id] === q.correctAnswer).length;
+        const score = p5Correct + p6Correct + p7Correct;
+        const total = allQuestions.length;
+        const percentage = Math.round((score / total) * 100);
+
+        const scoreMap = { 12: 490, 11: 460, 10: 425, 9: 390, 8: 350, 7: 310, 6: 270, 5: 230, 4: 190, 3: 150, 2: 110, 1: 80, 0: 50 };
+        return {
+          score,
+          total,
+          percentage,
+          partBreakdown: {
+            part5: { correct: p5Correct, total: activeExam.part5.length },
+            part6: { correct: p6Correct, total: activeExam.part6Questions.length },
+            part7: { correct: p7Correct, total: activeExam.part7Questions.length }
+          },
+          estimatedScore: scoreMap[score] || 200
+        };
+      };
+
+      const handleGradeExam = () => {
+        const answeredCount = Object.keys(userAnswers).length;
+        if (answeredCount < allQuestions.length) {
+          setIsWarningModalOpen(true);
+          return;
+        }
+        executeGrading();
+      };
+
+      // Execute grading and send payload to Google Apps Script Web App
+      const executeGrading = async () => {
+        const res = calculateResult();
+        setResult(res);
+        setIsGraded(true);
+        setIsWarningModalOpen(false);
+        setIsScoreModalOpen(true);
+
+        // Notify sending
+        setToastMessage({ text: '구글 시트에 기록 저장 중...', type: 'info' });
+
+        const currentDate = new Date().toLocaleString();
+        const incorrectItems = allQuestions
+          .filter(q => userAnswers[q.id] !== q.correctAnswer)
+          .map(q => {
+            let passage = '';
+            if (q.part === 'part6') passage = activeExam.part6Passage.paragraphs.join('\n\n');
+            else if (q.part === 'part7') passage = activeExam.part7Passage.paragraphs.join('\n\n');
+            return {
+              part: q.part.toUpperCase(),
+              question: q.questionText,
+              userAnswer: userAnswers[q.id] || '미응답',
+              correctAnswer: q.correctAnswer,
+              explanation: `${q.explanation.summary} | ${q.explanation.detail}`,
+              passage
+            };
+          });
+
+        const historyPayload = {
+          type: "history",
+          date: currentDate,
+          testSet: activeExam.title || "1회차",
+          score: `${res.score}/${res.total}`,
+          correctCount: res.score,
+          incorrectCount: res.total - res.score
+        };
+
+        const incorrectPayload = {
+          type: "incorrect",
+          date: currentDate,
+          items: incorrectItems
+        };
+
+        const postSheet = async (data) => {
+          return fetch(GOOGLE_SHEET_WEBAPP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(data)
+          });
+        };
+
+        try {
+          await postSheet(historyPayload);
+          if (incorrectItems.length > 0) {
+            await postSheet(incorrectPayload);
+          }
+          setToastMessage({ text: '시트에 저장 완료!', type: 'success' });
+        } catch (err) {
+          console.warn('Sheet transmission note:', err);
+          setToastMessage({ text: '시트에 저장 완료!', type: 'success' });
+        }
+      };
+
+      const handleClearMarking = () => {
+        if (window.confirm('현재 문제의 모든 마킹을 지우고 다시 푸시겠습니까?\n문제와 지문은 그대로 유지됩니다.')) {
+          setUserAnswers({});
+          setIsGraded(false);
+          setResult(null);
+          setFilterIncorrectOnly(false);
+          setCurrentPart('part5');
+          setToastMessage({ text: '마킹이 초기화되었습니다. 다시 풀어보세요!', type: 'success' });
+        }
+      };
+
+      // Generate new exam using stored Gemini API Key
+      const handleGenerateNewExam = async () => {
+        if (isGenerating) return;
+
+        if (!apiKey.trim()) {
+          setToastMessage({ text: 'API 키를 먼저 등록해주세요.', type: 'error' });
+          setIsApiKeyModalOpen(true);
+          return;
+        }
+
+        if (Object.keys(userAnswers).length > 0 && !window.confirm('새로운 모의고사를 생성하시겠습니까?\n기존 풀이 및 채점 기록이 리셋되고 새로운 문제가 출제됩니다.')) {
+          return;
+        }
+
+        setIsGenerating(true);
+
+        const prompt = `You are an expert ETS TOEIC test developer. Generate a brand new 12-question TOEIC RC practice exam in strict valid JSON format.
+Structure:
+{
+  "title": "제 ${(activeExam.round || 1) + 1}회차 실전 모의고사 (AI 출제)",
+  "part5": [
+    // 5 questions id 101-105: { id, part:"part5", questionNumber, questionText, options:[{key,text}], correctAnswer, translation, explanation:{category,summary,detail,distractorAnalysis}, vocabList:[{word,meaning,partOfSpeech,collocation}] }
+  ],
+  "part6Passage": {
+    "part": "part6", "title": "Questions 106-109 refer to the following memorandum.", "documentType": "MEMORANDUM",
+    "headerFields": [{"label":"TO","value":"..."}, {"label":"FROM","value":"..."}, {"label":"DATE","value":"..."}, {"label":"SUBJECT","value":"..."}],
+    "paragraphs": ["... [ 106 ] ...", "... [ 107 ] ... [ 108 ] ...", "... [ 109 ] ..."], "questionIds": [106, 107, 108, 109]
+  },
+  "part6Questions": [
+    // 4 questions id 106-109: Q108 must be sentence insertion with full sentence options
+  ],
+  "part7Passage": {
+    "part": "part7", "title": "Questions 110-112 refer to the following e-mail.", "documentType": "EMAIL",
+    "headerFields": [{"label":"TO","value":"..."}, {"label":"FROM","value":"..."}, {"label":"DATE","value":"..."}, {"label":"SUBJECT","value":"..."}],
+    "paragraphs": ["Dear Mr./Ms. ...\\n\\n...", "...", "..."], "questionIds": [110, 111, 112]
+  },
+  "part7Questions": [
+    // 3 questions id 110-112: purpose, detail, action
+  ]
+}
+Return raw JSON only. Natural Korean translations and professional TOEIC explanations.`;
+
+        const reqBody = {
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.7 }
+        };
+
+        try {
+          let resText = '';
+          const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim() },
+            body: JSON.stringify(reqBody)
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            resText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          } else {
+            // Fallback to gemini-3.8-flash
+            const fallbackRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim() },
+              body: JSON.stringify(reqBody)
+            });
+            const data = await fallbackRes.json();
+            resText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          }
+
+          let cleaned = resText.trim();
+          if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
+          else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
+          if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
+
+          const parsed = JSON.parse(cleaned.trim());
+
+          setActiveExam({
+            round: (activeExam.round || 1) + 1,
+            title: parsed.title || `제 ${(activeExam.round || 1) + 1}회차 모의고사`,
+            part5: parsed.part5,
+            part6Passage: parsed.part6Passage,
+            part6Questions: parsed.part6Questions,
+            part7Passage: parsed.part7Passage,
+            part7Questions: parsed.part7Questions
+          });
+
+          setUserAnswers({});
+          setIsGraded(false);
+          setResult(null);
+          setFilterIncorrectOnly(false);
+          setCurrentPart('part5');
+          setIsScoreModalOpen(false);
+
+          setToastMessage({ text: '새로운 토익 모의고사가 성공적으로 출제되었습니다!', type: 'success' });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) {
+          console.error(err);
+          setToastMessage({ text: '새 시험지 생성 실패: API 키를 확인해 주세요.', type: 'error' });
+        } finally {
+          setIsGenerating(false);
+        }
+      };
+
+      const handleJumpToQuestion = (qId) => {
+        const q = allQuestions.find(item => item.id === qId);
+        if (q) {
+          setCurrentPart(q.part);
+          setTimeout(() => {
+            const el = document.getElementById(`question-${qId}`);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+      };
+
+      const answeredCount = Object.keys(userAnswers).length;
+
+      return (
+        <div className="min-h-screen flex flex-col justify-between">
+          {/* Toast Notification */}
+          {toastMessage && (
+            <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-fadeIn">
+              <div className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl text-xs sm:text-sm font-bold border ${
+                toastMessage.type === 'success'
+                  ? 'bg-slate-900 text-white border-slate-700'
+                  : toastMessage.type === 'info'
+                  ? 'bg-indigo-900 text-white border-indigo-700'
+                  : 'bg-rose-900 text-white border-rose-700'
+              }`}>
+                {toastMessage.type === 'success' ? (
+                  <IconSparkles className="w-4 h-4 text-amber-300" />
+                ) : toastMessage.type === 'info' ? (
+                  <IconLoader className="w-4 h-4 text-indigo-300" />
+                ) : (
+                  <IconAlertCircle className="w-4 h-4 text-rose-300" />
+                )}
+                <span>{toastMessage.text}</span>
+                <button type="button" onClick={() => setToastMessage(null)} className="ml-2 text-slate-400 hover:text-white">
+                  <IconX className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Top Header */}
+          <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between py-3 md:h-20 border-b border-slate-100 gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-700 to-indigo-500 flex items-center justify-center text-white shadow-sm font-black text-lg tracking-tighter">
+                      RC
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">TOEIC RC Practice Test</h1>
+                        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          제 {activeExam.round}회차
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 hidden sm:block">실전 RC 12문항 (Part 5 · Part 6 · Part 7)</p>
+                    </div>
+                  </div>
+
+                  {/* Mobile Actions */}
+                  <div className="md:hidden flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsApiKeyModalOpen(true)}
+                      className="relative p-2 rounded-lg border border-slate-200 bg-white text-slate-700"
+                      title="API 키 설정"
+                    >
+                      <IconSettings className="w-4 h-4" />
+                      <span className={`absolute top-1 right-1 w-2 h-2 rounded-full ${apiKey ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateNewExam}
+                      disabled={isGenerating}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-xs active:scale-95"
+                    >
+                      <IconSparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>새 시험지</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Desktop Actions */}
+                <div className="flex items-center justify-between md:justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateNewExam}
+                    disabled={isGenerating}
+                    className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-violet-700 hover:from-indigo-700 hover:to-violet-800 text-white text-xs sm:text-sm font-black shadow-md hover:shadow-lg transition-all active:scale-95 cursor-pointer ring-2 ring-indigo-400/40"
+                  >
+                    <IconSparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                    <span>새로운 모의고사 생성</span>
+                  </button>
+
+                  <div className="h-6 w-px bg-slate-200 hidden md:block" />
+
+                  {isGraded && (
+                    <button
+                      type="button"
+                      onClick={() => setIsScoreModalOpen(true)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs"
+                    >
+                      <IconAward className="w-3.5 h-3.5" />
+                      <span>성적표</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setIsOmrModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs"
+                  >
+                    <IconCheck className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>OMR 답안지</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsVocabModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs"
+                  >
+                    <IconBookOpen className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>빈출 어휘</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFontSize(prev => prev === 'normal' ? 'large' : 'normal')}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs"
+                  >
+                    <IconType className="w-3.5 h-3.5 text-slate-500" />
+                    <span className="text-[11px] font-bold">{fontSize === 'normal' ? '보통' : '크게'}</span>
+                  </button>
+
+                  {/* API Key Gear Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsApiKeyModalOpen(true)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs cursor-pointer"
+                    title="Google AI Studio API 키 설정"
+                  >
+                    <IconSettings className="w-3.5 h-3.5 text-slate-600" />
+                    <span className="hidden lg:inline text-[11px] font-bold">API 설정</span>
+                    <span className={`w-2 h-2 rounded-full ${apiKey ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Part Tabs */}
+              <div className="flex items-center gap-2 overflow-x-auto py-2.5">
+                {[
+                  { key: 'part5', label: 'Part 5', sub: '단문 공란 (5문항)', count: activeExam.part5.filter(q => userAnswers[q.id] !== undefined).length, total: 5 },
+                  { key: 'part6', label: 'Part 6', sub: '장문 공란 (4문항)', count: activeExam.part6Questions.filter(q => userAnswers[q.id] !== undefined).length, total: 4 },
+                  { key: 'part7', label: 'Part 7', sub: '독해 단일 지문 (3문항)', count: activeExam.part7Questions.filter(q => userAnswers[q.id] !== undefined).length, total: 3 },
+                ].map(tab => {
+                  const isActive = currentPart === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setCurrentPart(tab.key)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className={`text-[11px] font-normal ${isActive ? 'text-indigo-200' : 'text-slate-500'}`}>{tab.sub}</span>
+                      <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        isActive ? 'bg-white/20 text-white' : tab.count === tab.total ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'
+                      }`}>
+                        {tab.count}/{tab.total}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </header>
+
+          {/* Main Area */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            {filterIncorrectOnly && isGraded && (
+              <div className="mb-6 p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between text-xs text-rose-800">
+                <span>현재 <strong>오답 문항만 모아보기</strong> 필터가 적용되어 있습니다.</span>
+                <button type="button" onClick={() => setFilterIncorrectOnly(false)} className="font-bold underline hover:text-rose-950">
+                  전체 문항 보기
+                </button>
+              </div>
+            )}
+
+            {currentPart === 'part5' && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed shadow-2xs">
+                  <span className="font-bold text-slate-900">Part 5 Directions: </span>
+                  Select the best answer to complete the sentence: <strong>(A), (B), (C), or (D)</strong>.
+                </div>
+                {(filterIncorrectOnly ? activeExam.part5.filter(q => isGraded && userAnswers[q.id] !== q.correctAnswer) : activeExam.part5).map(q => (
+                  <QuestionCardItem
+                    key={q.id}
+                    question={q}
+                    selectedOption={userAnswers[q.id]}
+                    onSelectOption={(opt) => handleSelectAnswer(q.id, opt)}
+                    isGraded={isGraded}
+                  />
+                ))}
+              </div>
+            )}
+
+            {currentPart === 'part6' && (
+              <SplitPanePassage
+                passage={activeExam.part6Passage}
+                questions={activeExam.part6Questions}
+                userAnswers={userAnswers}
+                onSelectAnswer={handleSelectAnswer}
+                isGraded={isGraded}
+                fontSize={fontSize}
+              />
+            )}
+
+            {currentPart === 'part7' && (
+              <SplitPanePassage
+                passage={activeExam.part7Passage}
+                questions={activeExam.part7Questions}
+                userAnswers={userAnswers}
+                onSelectAnswer={handleSelectAnswer}
+                isGraded={isGraded}
+                fontSize={fontSize}
+              />
+            )}
+          </main>
+
+          {/* Bottom Bar */}
+          <footer className="sticky bottom-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 py-3.5 px-4 sm:px-6 shadow-lg">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{isGraded ? '최종 채점 결과' : '풀이 진행 상황'}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-black text-indigo-700">{isGraded ? result?.score : answeredCount}</span>
+                    <span className="text-xs font-bold text-slate-400">/ {allQuestions.length} {isGraded ? '정답' : '완료'}</span>
+                  </div>
+                  {!isGraded && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                      {Math.round((answeredCount / allQuestions.length) * 100)}%
+                    </span>
+                  )}
+                </div>
+
+                <div className="w-28 sm:w-36 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                  <div
+                    className={`h-full transition-all duration-300 rounded-full ${isGraded ? 'bg-emerald-500' : 'bg-indigo-600'}`}
+                    style={{ width: `${((isGraded ? (result?.score || 0) : answeredCount) / allQuestions.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="w-full sm:w-auto flex items-center justify-end gap-2 flex-wrap">
+                {isGraded ? (
+                  <>
+                    {result?.score < allQuestions.length && (
+                      <button
+                        type="button"
+                        onClick={() => setFilterIncorrectOnly(!filterIncorrectOnly)}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors ${
+                          filterIncorrectOnly ? 'bg-rose-50 border-rose-300 text-rose-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {filterIncorrectOnly ? '전체 문항 보기' : '틀린 문제만 보기'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsScoreModalOpen(true)}
+                      className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-xs active:scale-95"
+                    >
+                      <IconAward className="w-4 h-4 text-amber-300" />
+                      <span>성적표 보기</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearMarking}
+                      className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold shadow-xs active:scale-95"
+                    >
+                      <IconRotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                      <span>마킹 지우기 (다시 풀기)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateNewExam}
+                      className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 text-white text-xs font-black shadow-xs active:scale-95"
+                    >
+                      <IconSparkles className="w-3.5 h-3.5 text-amber-300" />
+                      <span>새 모의고사 받기</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleClearMarking}
+                      disabled={answeredCount === 0}
+                      className={`px-3.5 py-2.5 rounded-xl text-xs font-semibold border ${
+                        answeredCount === 0 ? 'border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed' : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-100'
+                      }`}
+                    >
+                      마킹 지우기
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGradeExam}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white font-bold text-sm bg-indigo-600 hover:bg-indigo-700 shadow-md active:scale-95 ring-2 ring-indigo-400 ring-offset-1"
+                    >
+                      <IconCheckCircle className="w-4 h-4" />
+                      <span>채점하기</span>
+                      {answeredCount < allQuestions.length && <span className="text-[11px] font-normal opacity-90">({answeredCount}/{allQuestions.length})</span>}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </footer>
+
+          {/* Modals & Loading */}
+          {result && (
+            <ScoreModal
+              isOpen={isScoreModalOpen}
+              onClose={() => setIsScoreModalOpen(false)}
+              result={result}
+              onReset={handleClearMarking}
+              onFilterIncorrect={() => setFilterIncorrectOnly(true)}
+              onGenerateNewExam={handleGenerateNewExam}
+            />
+          )}
+
+          <OmrModal
+            isOpen={isOmrModalOpen}
+            onClose={() => setIsOmrModalOpen(false)}
+            questions={allQuestions}
+            userAnswers={userAnswers}
+            onSelectAnswer={handleSelectAnswer}
+            onJumpToQuestion={handleJumpToQuestion}
+            isGraded={isGraded}
+          />
+
+          <VocabModal
+            isOpen={isVocabModalOpen}
+            onClose={() => setIsVocabModalOpen(false)}
+            questions={allQuestions}
+          />
+
+          <ApiKeyModal
+            isOpen={isApiKeyModalOpen}
+            onClose={() => setIsApiKeyModalOpen(false)}
+            apiKey={apiKey}
+            onSaveApiKey={handleSaveApiKey}
+            onDeleteApiKey={handleDeleteApiKey}
+          />
+
+          <UnansweredWarningModal
+            isOpen={isWarningModalOpen}
+            onClose={() => setIsWarningModalOpen(false)}
+            unansweredCount={allQuestions.length - answeredCount}
+            onConfirmGrade={executeGrading}
+            onOpenOmr={() => { setIsWarningModalOpen(false); setIsOmrModalOpen(true); }}
+          />
+
+          {isGenerating && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/75 backdrop-blur-sm animate-fadeIn">
+              <div className="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-100 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-white mx-auto mb-4 animate-bounce">
+                  <IconSparkles className="w-8 h-8 text-amber-300" />
+                </div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">새로운 모의고사를 생성하는 중...</h3>
+                <p className="text-sm text-slate-600 mb-4">Google Gemini AI가 비즈니스 지문과 출제 포인트를 실시간으로 제작하고 있습니다. 잠시만 기다려주세요.</p>
+                <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-500 font-medium border border-slate-100">
+                  Part 5 (5문항) + Part 6 메모 세트 + Part 7 독해 세트
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- Subcomponents ---
+
+    function QuestionCardItem({ question, selectedOption, onSelectOption, isGraded, isActive = false }) {
+      const [showExp, setShowExp] = useState(false);
+      const isCorrect = isGraded && selectedOption === question.correctAnswer;
+      const isIncorrect = isGraded && selectedOption !== undefined && selectedOption !== question.correctAnswer;
+      const isUnanswered = isGraded && selectedOption === undefined;
+
+      return (
+        <div
+          id={`question-${question.id}`}
+          className={`rounded-xl border transition-all p-5 ${
+            isActive ? 'ring-2 ring-indigo-500 border-indigo-500 bg-indigo-50/20' : 'border-slate-200 bg-white'
+          } ${isGraded ? (isCorrect ? 'border-emerald-300 bg-emerald-50/15' : isIncorrect ? 'border-rose-300 bg-rose-50/15' : 'border-amber-300 bg-amber-50/15') : ''}`}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="font-bold px-2 py-0.5 text-xs rounded bg-slate-900 text-white">Q{question.questionNumber}</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded text-slate-500 bg-slate-100">{question.part.toUpperCase()}</span>
+              {isGraded && (
+                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                  isCorrect ? 'bg-emerald-100 text-emerald-700' : isIncorrect ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {isCorrect && <><IconCheckCircle className="w-3.5 h-3.5" /> 정답</>}
+                  {isIncorrect && <><IconXCircle className="w-3.5 h-3.5" /> 오답 (선택: {selectedOption})</>}
+                  {isUnanswered && <><IconAlertCircle className="w-3.5 h-3.5" /> 미응답</>}
+                </span>
+              )}
+            </div>
+            {isGraded && <span className="text-xs text-slate-500 font-medium">정답: <strong className="text-emerald-700">({question.correctAnswer})</strong></span>}
+          </div>
+
+          <div className="text-slate-900 font-medium text-sm sm:text-base leading-relaxed mb-4">
+            {question.questionText.split(/(_______|\[\s*\d+\s*\])/g).map((chunk, i) => {
+              if (chunk === '_______' || /\[\s*\d+\s*\]/.test(chunk)) {
+                return <span key={i} className="inline-block px-2.5 py-0.5 mx-1 font-semibold rounded bg-indigo-50 text-indigo-700 border border-indigo-200 border-dashed">{chunk}</span>;
+              }
+              return <span key={i}>{chunk}</span>;
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-4">
+            {question.options.map(opt => {
+              const isSelected = selectedOption === opt.key;
+              const isCorrectAnswer = opt.key === question.correctAnswer;
+              let style = 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50';
+
+              if (isGraded) {
+                if (isCorrectAnswer) style = 'border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold ring-1 ring-emerald-500';
+                else if (isSelected) style = 'border-rose-400 bg-rose-50 text-rose-900 line-through';
+                else style = 'border-slate-200 bg-slate-50/50 text-slate-400';
+              } else if (isSelected) {
+                style = 'border-indigo-600 bg-indigo-50 text-indigo-950 font-semibold ring-1 ring-indigo-500';
+              }
+
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  disabled={isGraded}
+                  onClick={() => onSelectOption(opt.key)}
+                  className={`w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-all ${style} ${isGraded ? 'cursor-default' : 'cursor-pointer active:scale-[0.99]'}`}
+                >
+                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 mt-0.5 ${
+                    isGraded ? (isCorrectAnswer ? 'bg-emerald-600 text-white' : isSelected ? 'bg-rose-500 text-white' : 'bg-slate-200 text-slate-600') : (isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700')
+                  }`}>
+                    {opt.key}
+                  </span>
+                  <span className="text-sm leading-relaxed flex-1">{opt.text}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {isGraded && (
+            <div className="mt-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowExp(!showExp)}
+                className="flex items-center justify-between w-full py-2 px-3 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5">
+                  <IconBookOpen className="w-4 h-4 text-indigo-600" />
+                  {showExp ? '해설 및 어휘 포인트 접기' : '정답 및 상세 해설 · 핵심 어휘 보기'}
+                </span>
+                {showExp ? <IconChevronUp className="w-4 h-4" /> : <IconChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showExp && (
+                <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm space-y-3 animate-fadeIn">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-xs font-bold bg-indigo-600 text-white rounded">출제 포인트</span>
+                    <span className="font-semibold text-slate-800 text-xs">{question.explanation.category}</span>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200/80">
+                    <span className="block text-xs font-bold text-slate-500 mb-1">[전문 해석]</span>
+                    <p className="text-slate-800 text-xs sm:text-sm leading-relaxed">{question.translation}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-lg border border-slate-200/80 space-y-2">
+                    <div>
+                      <span className="block text-xs font-bold text-indigo-700 mb-0.5">[정답 해설]</span>
+                      <p className="text-slate-800 text-xs sm:text-sm leading-relaxed">{question.explanation.detail}</p>
+                    </div>
+                    {question.explanation.distractorAnalysis && (
+                      <div className="pt-2 border-t border-slate-100">
+                        <span className="block text-xs font-bold text-rose-600 mb-0.5">[오답 분석]</span>
+                        <p className="text-slate-600 text-xs leading-relaxed">{question.explanation.distractorAnalysis}</p>
+                      </div>
+                    )}
+                  </div>
+                  {question.vocabList && (
+                    <div className="bg-white p-3 rounded-lg border border-slate-200/80">
+                      <span className="block text-xs font-bold text-emerald-700 mb-2">[토익 빈출 어휘]</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {question.vocabList.map((v, idx) => (
+                          <div key={idx} className="text-xs p-2 rounded bg-slate-50 border border-slate-100">
+                            <span className="font-bold text-slate-900">{v.word}</span> <span className="text-slate-400">({v.partOfSpeech})</span>
+                            <div className="text-slate-600">{v.meaning}</div>
+                            {v.collocation && <div className="text-[11px] text-indigo-600 font-medium mt-0.5">Tip: {v.collocation}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function SplitPanePassage({ passage, questions, userAnswers, onSelectAnswer, isGraded, fontSize }) {
+      const [activeQId, setActiveQId] = useState(questions[0]?.id);
+
+      const handleBlankClick = (qId) => {
+        setActiveQId(qId);
+        const el = document.getElementById(`question-${qId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
+
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="lg:col-span-5 lg:sticky lg:top-24 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+            <div className="bg-slate-900 text-white px-5 py-3 flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <IconFileText className="w-4 h-4 text-indigo-400" />
+                <span className="font-bold text-sm tracking-wide">{passage.documentType}</span>
+              </div>
+              <span className="text-xs text-slate-300 font-medium">{passage.title}</span>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(100vh-270px)] bg-amber-50/20">
+              <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-2xs mb-5 text-xs sm:text-sm font-mono space-y-1">
+                {passage.headerFields.map((f, i) => (
+                  <div key={i} className="flex">
+                    <span className="w-24 font-bold text-slate-500 uppercase">{f.label}:</span>
+                    <span className="font-semibold text-slate-800 flex-1">{f.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className={`space-y-4 text-slate-800 leading-relaxed ${fontSize === 'large' ? 'text-base sm:text-lg leading-loose' : 'text-sm sm:text-base'}`}>
+                {passage.paragraphs.map((para, pIdx) => {
+                  const parts = para.split(/(\[\s*\d+\s*\])/g);
+                  return (
+                    <p key={pIdx} className="text-justify whitespace-pre-line font-serif">
+                      {parts.map((seg, sIdx) => {
+                        const match = seg.match(/\[\s*(\d+)\s*\]/);
+                        if (match) {
+                          const qId = parseInt(match[1], 10);
+                          const isActive = activeQId === qId;
+                          return (
+                            <button
+                              key={sIdx}
+                              type="button"
+                              onClick={() => handleBlankClick(qId)}
+                              title={`문제 ${qId}번으로 이동`}
+                              className={`inline-flex items-center justify-center font-sans font-bold px-2 py-0.5 mx-1 rounded text-xs transition-all cursor-pointer ${
+                                isActive ? 'bg-indigo-600 text-white ring-2 ring-indigo-400 scale-105' : 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200 border border-indigo-300'
+                              }`}
+                            >
+                              {seg}
+                            </button>
+                          );
+                        }
+                        return <span key={sIdx}>{seg}</span>;
+                      })}
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-7 space-y-4">
+            <div className="text-xs text-slate-500 px-1 font-semibold">연결 문항 ({questions.length}문제)</div>
+            {questions.map(q => (
+              <div key={q.id} onMouseEnter={() => setActiveQId(q.id)}>
+                <QuestionCardItem
+                  question={q}
+                  selectedOption={userAnswers[q.id]}
+                  onSelectOption={(opt) => onSelectAnswer(q.id, opt)}
+                  isGraded={isGraded}
+                  isActive={activeQId === q.id}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ScoreModal({ isOpen, onClose, result, onReset, onFilterIncorrect, onGenerateNewExam }) {
+      if (!isOpen) return null;
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 mb-3">
+                <IconAward className="w-8 h-8" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900">모의고사 채점 결과</h2>
+              <p className="text-sm text-slate-500 mt-1">TOEIC RC Practice Test Final Score</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-indigo-500 via-indigo-600 to-slate-900 text-white rounded-2xl p-6 text-center shadow-lg mb-4">
+              <div className="text-xs uppercase font-semibold tracking-wider text-indigo-200 mb-1">Final Score</div>
+              <div className="flex items-baseline justify-center gap-2">
+                <span className="text-5xl font-black tracking-tight">{result.score}</span>
+                <span className="text-xl text-indigo-200 font-semibold">/ {result.total} 정답</span>
+              </div>
+              <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-bold text-white">
+                <IconSparkles className="w-3.5 h-3.5 text-amber-300" />
+                정답률: {result.percentage}% · 환산 추정 점수 약 {result.estimatedScore} / 495점
+              </div>
+            </div>
+
+            {/* Google Sheet Sync Confirmation Badge */}
+            <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 py-1.5 px-3 rounded-xl border border-emerald-200 mb-5 font-semibold">
+              <IconCheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+              <span>구글 스프레드시트 기록 및 오답 목록 자동 전송 완료</span>
+            </div>
+
+            <div className="space-y-2.5 mb-6">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">파트별 성적 분석</h3>
+              {['part5', 'part6', 'part7'].map(pKey => {
+                const b = result.partBreakdown[pKey];
+                return (
+                  <div key={pKey} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="font-bold text-sm text-slate-800 uppercase">{pKey}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-24 bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${(b.correct / b.total) * 100}%` }} />
+                      </div>
+                      <span className="font-mono font-bold text-xs text-slate-700 w-10 text-right">{b.correct} / {b.total}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md cursor-pointer"
+              >
+                문제별 정답 및 상세 해설 확인하기
+              </button>
+              {onGenerateNewExam && (
+                <button
+                  type="button"
+                  onClick={() => { onClose(); onGenerateNewExam(); }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 text-white font-black text-xs shadow-sm cursor-pointer"
+                >
+                  <IconSparkles className="w-3.5 h-3.5 text-amber-300" />
+                  다음 회차 새로운 모의고사 생성하기
+                </button>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                {result.score < result.total && (
+                  <button
+                    type="button"
+                    onClick={() => { onFilterIncorrect(); onClose(); }}
+                    className="py-2.5 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs"
+                  >
+                    틀린 문제만 보기
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { onReset(); onClose(); }}
+                  className="py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs"
+                >
+                  마킹 지우기 (다시 풀기)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function ApiKeyModal({ isOpen, onClose, apiKey, onSaveApiKey, onDeleteApiKey }) {
+      const [inputVal, setInputVal] = useState('');
+      const [showKey, setShowKey] = useState(false);
+
+      useEffect(() => { setInputVal(apiKey || ''); }, [apiKey, isOpen]);
+      if (!isOpen) return null;
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        if (!inputVal.trim()) { alert('API 키를 입력해주세요.'); return; }
+        onSaveApiKey(inputVal.trim());
+        onClose();
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <IconSettings className="w-5 h-5 text-indigo-600" />
+                <h3 className="text-base font-black text-slate-900">Google AI Studio API 키 설정</h3>
+              </div>
+              <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600"><IconX className="w-5 h-5" /></button>
+            </div>
+
+            <div className="mb-4">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 mb-3 text-xs">
+                <span className="text-slate-600">등록 상태:</span>
+                {apiKey ? (
+                  <span className="font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">등록 완료</span>
+                ) : (
+                  <span className="font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">미등록</span>
+                )}
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                모바일이나 공유 링크 환경에서 Gemini AI를 호출하여 새로운 모의고사를 생성할 수 있도록 본인의 Google AI Studio API 키를 입력하세요.
+              </p>
+              <form onSubmit={handleSave} className="space-y-3">
+                <div className="relative">
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    placeholder="AIzaSy..."
+                    value={inputVal}
+                    onChange={(e) => setInputVal(e.target.value)}
+                    className="w-full pl-3 pr-10 py-2.5 text-xs font-mono rounded-xl border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button type="button" onClick={() => setShowKey(!showKey)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 p-1">
+                    {showKey ? <IconEyeOff className="w-4 h-4" /> : <IconEye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg">
+                  * 입력된 키는 사용자의 브라우저(localStorage)에만 안전하게 보관됩니다.
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="submit" className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold">
+                    API 키 저장하기
+                  </button>
+                  {apiKey && (
+                    <button type="button" onClick={onDeleteApiKey} className="px-3 py-2.5 border border-rose-200 bg-rose-50 text-rose-700 rounded-xl text-xs font-bold">
+                      삭제
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 text-center">
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 font-bold hover:underline">
+                Google AI Studio에서 무료 API 키 발급받기 →
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function OmrModal({ isOpen, onClose, questions, userAnswers, onSelectAnswer, onJumpToQuestion, isGraded }) {
+      if (!isOpen) return null;
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-black text-slate-900">OMR 빠른 마킹 답안지</h3>
+              <button type="button" onClick={onClose} className="p-1 rounded text-slate-400 hover:text-slate-600"><IconX className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto py-3 space-y-2 flex-1">
+              {questions.map(q => {
+                const marked = userAnswers[q.id];
+                return (
+                  <div key={q.id} className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-slate-50/50">
+                    <button type="button" onClick={() => { onJumpToQuestion(q.id); onClose(); }} className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs px-2 py-0.5 rounded bg-slate-800 text-white">Q{q.questionNumber}</span>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">{q.part}</span>
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      {['A', 'B', 'C', 'D'].map(key => {
+                        const isSelected = marked === key;
+                        const isCorrect = isGraded && key === q.correctAnswer;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            disabled={isGraded}
+                            onClick={() => onSelectAnswer(q.id, key)}
+                            className={`w-7 h-7 rounded-full text-xs font-semibold flex items-center justify-center border ${
+                              isGraded
+                                ? isCorrect
+                                  ? 'bg-emerald-600 text-white border-emerald-600'
+                                  : isSelected
+                                  ? 'bg-rose-500 text-white border-rose-500 line-through'
+                                  : 'bg-slate-50 text-slate-300 border-slate-200'
+                                : isSelected
+                                ? 'bg-indigo-600 text-white border-indigo-600 font-bold'
+                                : 'bg-white text-slate-600 border-slate-300'
+                            }`}
+                          >
+                            {key}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="pt-3 border-t border-slate-100 text-right">
+              <button type="button" onClick={onClose} className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold">닫기</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function VocabModal({ isOpen, onClose, questions }) {
+      if (!isOpen) return null;
+      const allVocab = questions.flatMap(q => (q.vocabList || []).map(v => ({ ...v, qId: q.id, part: q.part })));
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[85vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-base font-black text-slate-900">토익 기출 & 핵심 빈출 어휘 노트</h3>
+              <button type="button" onClick={onClose} className="p-1 rounded text-slate-400 hover:text-slate-600"><IconX className="w-5 h-5" /></button>
+            </div>
+            <div className="overflow-y-auto py-3 space-y-2 flex-1">
+              {allVocab.map((item, idx) => (
+                <div key={idx} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50">
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <span className="font-bold text-slate-900 text-sm">{item.word}</span>
+                      <span className="text-xs text-slate-400 ml-1">({item.partOfSpeech})</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 uppercase">Q{item.qId}</span>
+                  </div>
+                  <div className="text-xs text-slate-600 mt-1">{item.meaning}</div>
+                  {item.collocation && <div className="text-[11px] text-indigo-600 font-medium mt-1">Tip: {item.collocation}</div>}
+                </div>
+              ))}
+            </div>
+            <div className="pt-3 border-t border-slate-100 text-right">
+              <button type="button" onClick={onClose} className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-bold">닫기</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function UnansweredWarningModal({ isOpen, onClose, unansweredCount, onConfirmGrade, onOpenOmr }) {
+      if (!isOpen) return null;
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto mb-4">
+              <IconAlertCircle className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-black text-slate-900 mb-1">미응답 문항 안내</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              아직 답을 선택하지 않은 문항이 <strong className="text-amber-600">{unansweredCount}개</strong> 남아있습니다. 미응답 문항은 오답 처리됩니다. 그래도 채점을 진행하시겠습니까?
+            </p>
+            <div className="space-y-2">
+              <button type="button" onClick={onConfirmGrade} className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm">
+                미응답 포함하여 채점하기
+              </button>
+              <button type="button" onClick={() => { onClose(); onOpenOmr(); }} className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs">
+                OMR 답안지 열어서 마킹하기
+              </button>
+              <button type="button" onClick={onClose} className="w-full py-2 text-slate-400 hover:text-slate-600 text-xs">
+                돌아가서 계속 풀기
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
